@@ -1,0 +1,7 @@
+#!/bin/sh 
+
+echo  "^Preparing the kubernetes directory"
+mkdir -p /etc/kubernetes/ssl
+mkdir -p /etc/kubernetes/manifests
+
+ 

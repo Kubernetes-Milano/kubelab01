@@ -1,0 +1,28 @@
+#!/bin/sh
+
+mkdir -p /etc/systemd/system/docker.service.d/
+
+cat << EOF > /etc/systemd/system/docker.service.d/40-flannel.conf
+[Unit]
+Requires=flanneld.service
+After=flanneld.service
+[Service]
+EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+EOF
+
+
+cat << /etc/kubernetes/cni/ > EOF
+DOCKER_OPT_BIP=""
+DOCKER_OPT_IPMASQ=""
+EOF
+
+mkdir -p /etc/kubernetes/cni/net.d/
+
+
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}

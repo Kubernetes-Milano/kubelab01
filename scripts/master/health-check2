@@ -1,0 +1,9 @@
+#!/bin/sh 
+
+curl -s localhost:10255/pods | jq -r '.items[].metadata.name'
+
+# Expected output similar to 
+## kube-scheduler-$node
+## kube-apiserver-$node
+## kube-controller-$node
+## kube-proxy-$node

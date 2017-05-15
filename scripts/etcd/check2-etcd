@@ -1,0 +1,2 @@
+#!/bin/sh
+etcdctl -C http://${HostIP}:4001 member list

@@ -1,0 +1,30 @@
+#!/bin/sh 
+
+echo "^Configuring the network..."
+
+cat << EOF > /etc/flannel/options.env
+FLANNELD_IFACE=${ADVERTISE_IP}
+FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
+EOF
+
+mkdir -p /etc/systemd/system/flanneld.service.d/
+
+mkdir -p /etc/kubernetes/cni/net.d/
+
+cat << EOF > /etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf
+  
+DOCKER_OPT_BIP=""
+DOCKER_OPT_IPMASQ=""
+
+EOF
+
+cat << EOF > /etc/kubernetes/cni/net.d/10-flannel.conf
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
+
+EOF
