@@ -1,6 +1,6 @@
 # Kubelab01++, getting started instructions
 
-Questa repository vi aiutera' a creare un nodo `coreos` che utilizzeremo durante il prossimo `kubelab`. 
+Questa repository vi aiutera' a creare un nodo `coreos` che utilizzeremo durante il prossimo [kubelab](https://www.meetup.com/kubernetes-milano/events/239987565). 
 
 # HowTo
 
