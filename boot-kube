@@ -167,13 +167,14 @@ EOF
   echo "Faccio diventare i certificati di proprieta di root"
   chown root:root /etc/kubernetes/ssl/*-key.pem
 
+
 }
 
 
 
 function init_flannel {
     echo "Check per etcd..."
-    curl --silent "$ETCD/v2/machines" >> /dev/null 
+    curl --silent "$ETCD/v2/machines" > /dev/null 
     
     RES=$(curl --silent -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ACTIVE_ETCD/v2/keys/coreos.com/network/config?prevExist=false")
     
@@ -184,11 +185,6 @@ function init_flannel {
     fi
 
     echo "Non ci sono errori con la configurazione di flanneld"
-
-
-
-
-
 }
 
 function init_templates {
@@ -646,22 +642,43 @@ function get_kubectl {
 }
 
 
-init_export 
+function write_files {
+  echo "Scrivendo su disco i file ..."
+  echo "Esportando le varianili d'ambiente!"
+  init_export  
+
+  echo "Scrivendo i certificati"
+  init_certs
+
+  echo "Scrivendo i template pe le componenti di k8s"
+  init_templates
+}
+
+write_files
+
 
 init_etcd
 
-init_templates
 
 init_flannel
+
+
+
+
 
 systemctl stop update-engine; systemctl mask update-engine
 
 systemctl daemon-reload
 
-
 systemctl enable {flanneld,kubelet}; 
 
 systemctl start {flanneld,docker,kubelet}
+
+get_kubectl
+
+test_bootstrap
+
+start_addons
 
 
 
