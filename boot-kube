@@ -648,8 +648,6 @@ function get_kubectl {
 
 init_export 
 
-init_config
-
 init_etcd
 
 init_templates
