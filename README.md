@@ -55,6 +55,12 @@ programmaticamente quante risorse assegnare a ogni VM in parte, per esempio:
 - RAM;
 - Networking. 
 
+## Alternative
+
+Per il deploy del run time Linux CoreOS, Vagrant non l'unica modalità. Ogni specifico contesto 
+permette una modalità ad hoc. Per ogni ulteriore dettaglio informativo riferire la documentazione 
+sul sito di CoreOS. L'URL di partena è [CoreOS deploy](https://coreos.com/os/docs/latest).
+
 
 
 
