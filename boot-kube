@@ -40,9 +40,20 @@ echo
 echo "Lancio di etcd..."
 echo 
 
-systemctl start etcd2
+local TEMPLATE=/etc/systemd/system/etcd2.service.d/40-listen-address.conf
 
-systemctl enable etcd2
+if [! -f $TEMPLATE]; then 
+  mkdir -p $(dirname $TEMPLATE)
+  cat << EOF > $TEMPLATE
+[Service]
+Environment=ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+Environment=ETCD_ADVERTISE_CLIENT_URLS=http://${COREOS_PUBLIC_IPV4}:2379
+EOF
+  fi 
+
+
+
+systemctl start etcd2
 
 
 # # Fermo il servizio classico di etcd
