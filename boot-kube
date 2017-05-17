@@ -11,7 +11,7 @@ set -ev
 #
 
 # Come raggiungere etcd (http://ip:port)
-export ETCD_ENDPOINTS=http://${COREOS_PUBLIC_IPV4}:2379 ### Cambiami se l'IP della macchina è diverso.
+export ETCD_ENDPOINTS=http://127.0.0.1:2379 ### Cambiami se l'IP della macchina è diverso.
 
 # La versione di (vX.Y.Z) Kubernetes
 export K8S_VER=v1.6.0_coreos.0
@@ -46,7 +46,7 @@ echo
   cat << EOF > $etcd_template
 [Service]
 Environment=ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-Environment=ETCD_ADVERTISE_CLIENT_URLS=http://${COREOS_PUBLIC_IPV4}:2379
+Environment=ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379
 EOF
   fi 
 
@@ -227,7 +227,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --container-runtime=docker \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
-  --hostname-override=${ADVERTISE_IP} \
+  --hostname-override=127.0.0.1 \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local
 ExecStop=-/usr/bin/rkt stop --uuid-file=${uuid_file}
@@ -262,7 +262,7 @@ spec:
     - --allow-privileged=true
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
-    - --advertise-address=${COREOS_PUBLIC_IPV4}
+    - --advertise-address=127.0.0.1
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
@@ -495,7 +495,7 @@ spec:
         args:
         - --cache-size=1000
         - --no-resolv
-        - --server=127.0.0.1#10053
+        - --server=127.0.0.1:10053
         - --log-facility=-
         ports:
         - containerPort: 53
@@ -560,7 +560,7 @@ EOF
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-FLANNELD_IFACE=${COREOS_PUBLIC_IPV4}
+FLANNELD_IFACE=127.0.0.1
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 EOF
     fi
@@ -677,14 +677,8 @@ systemctl daemon-reload
 
 systemctl enable {flanneld,kubelet}
 
-for s in flanneld docker kubelet
-do
-  systemctl start $s &
-  wait $!
-done
-
+  systemctl start {flanneld,docker,kubelet}
 #get_kubectl
 
 #test_bootstrap
 echo "FINITO!!!"
-
