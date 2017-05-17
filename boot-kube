@@ -42,7 +42,7 @@ echo
 
 systemctl start etcd2
 
-systemctl enable etcd
+systemctl enable etcd2
 
 
 # # Fermo il servizio classico di etcd
@@ -186,17 +186,8 @@ EOF
 
 function init_flannel {
     echo "Check per etcd..."
-    curl --silent "$ETCD/v2/machines"
     
-    RES=$(curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_ENDPOINTS/v2/keys/coreos.com/network/config")
-    
-    echo "Ci sono errori?"
-    
-    if [ -z "$(echo $RES | grep '"action":"create"')" ] && [ -z "$(echo $RES | grep 'Key already exists')" ]; then
-        echo "Ci sono errori con la configurazione di flanneld: $RES"
-    fi
-
-    echo "Non ci sono errori con la configurazione di flanneld"
+    curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_ENDPOINTS/v2/keys/coreos.com/network/config"
 }
 
 function init_templates {
@@ -559,8 +550,8 @@ EOF
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-FLANNELD_IFACE=$COREOS_PUBLIC_IPV4
-FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
+FLANNELD_IFACE=${COREOS_PUBLIC_IPV4}
+FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 EOF
     fi
 
