@@ -10,6 +10,7 @@ set -ev
 # 5. Deploy delle componenti aggiuntive: DNS. 
 #
 
+export HOST_IP=172.17.8.101
 # Come raggiungere etcd (http://ip:port)
 export ETCD_ENDPOINTS=http://127.0.0.1:2379 ### Cambiami se l'IP della macchina è diverso.
 
@@ -53,25 +54,6 @@ EOF
 systemctl daemon-reload;
 
 systemctl start etcd2
-
-
-# # Fermo il servizio classico di etcd
-# systemctl stop etcd >> /dev/null
-# echo "Lancio di etcd..."
-# docker run -d -v /usr/share/ca-certificates/:/etc/ssl/certs \
-#            -p 4001:4001 \
-#            -p 2380:2380 \
-#            -p 2379:2379 \
-#            --name etcd \
-#            quay.io/coreos/etcd /usr/local/bin/etcd \
-#            -name etcd0 \
-#            -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001 \
-#            -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001 \
-#            -initial-advertise-peer-urls http://${ADVERTISE_IP}:2380 \
-#            -listen-peer-urls http://0.0.0.0:2380 \
-#            -initial-cluster-token chiave-di-accesso \
-#            -initial-cluster etcd0=http://${ADVERTISE_IP}:2380 \
-#            -initial-cluster-state new
 }
 
 function init_certs {
@@ -196,7 +178,6 @@ EOF
 
 function init_flannel {
     echo "Check per etcd..."
-    
     curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_ENDPOINTS/v2/keys/coreos.com/network/config"
 }
 
@@ -227,7 +208,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --container-runtime=docker \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
-  --hostname-override=127.0.0.1 \
+  --hostname-override=${HOST_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local
 ExecStop=-/usr/bin/rkt stop --uuid-file=${uuid_file}
@@ -262,7 +243,7 @@ spec:
     - --allow-privileged=true
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
-    - --advertise-address=127.0.0.1
+    - --advertise-address=${HOST_IP}
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
@@ -416,151 +397,13 @@ spec:
       initialDelaySeconds: 15
       timeoutSeconds: 15
 EOF
-    fi
-
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dns.yaml
-    if [ ! -f $TEMPLATE ]; then
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: ReplicationController
-metadata:
-  name: kube-dns-v20
-  namespace: kube-system
-  labels:
-    k8s-app: kube-dns
-    version: v20
-    kubernetes.io/cluster-service: "true"
-spec:
-  replicas: 1
-  selector:
-    k8s-app: kube-dns
-    version: v20
-  template:
-    metadata:
-      labels:
-        k8s-app: kube-dns
-        version: v20
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
-    spec:
-      containers:
-      - name: kubedns
-        image: gcr.io/google_containers/kubedns-amd64:1.8
-        resources:
-          limits:
-            memory: 170Mi
-          requests:
-            cpu: 100m
-            memory: 70Mi
-        livenessProbe:
-          httpGet:
-            path: /healthz-kubedns
-            port: 8080
-            scheme: HTTP
-          initialDelaySeconds: 60
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 5
-        readinessProbe:
-          httpGet:
-            path: /readiness
-            port: 8081
-            scheme: HTTP
-          initialDelaySeconds: 3
-          timeoutSeconds: 5
-        args:
-        - --domain=cluster.local.
-        - --dns-port=10053
-        ports:
-        - containerPort: 10053
-          name: dns-local
-          protocol: UDP
-        - containerPort: 10053
-          name: dns-tcp-local
-          protocol: TCP
-      - name: dnsmasq
-        image: gcr.io/google_containers/kube-dnsmasq-amd64:1.4
-        livenessProbe:
-          httpGet:
-            path: /healthz-dnsmasq
-            port: 8080
-            scheme: HTTP
-          initialDelaySeconds: 60
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 5
-        args:
-        - --cache-size=1000
-        - --no-resolv
-        - --server=127.0.0.1:10053
-        - --log-facility=-
-        ports:
-        - containerPort: 53
-          name: dns
-          protocol: UDP
-        - containerPort: 53
-          name: dns-tcp
-          protocol: TCP
-      - name: healthz
-        image: gcr.io/google_containers/exechealthz-amd64:1.2
-        resources:
-          limits:
-            memory: 50Mi
-          requests:
-            cpu: 10m
-            memory: 50Mi
-        args:
-        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null
-        - --url=/healthz-dnsmasq
-        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
-        - --url=/healthz-kubedns
-        - --port=8080
-        - --quiet
-        ports:
-        - containerPort: 8080
-          protocol: TCP
-      dnsPolicy: Default
-EOF
-  fi 
-
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dns-svc.yaml
-    if [ ! -f $TEMPLATE ]; then
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: Service
-metadata:
-  name: kube-dns
-  namespace: kube-system
-  labels:
-    k8s-app: kube-dns
-    kubernetes.io/cluster-service: "true"
-    kubernetes.io/name: "KubeDNS"
-spec:
-  selector:
-    k8s-app: kube-dns
-  clusterIP: ${DNS_SERVICE_IP}
-  ports:
-  - name: dns
-    port: 53
-    protocol: UDP
-  - name: dns-tcp
-    port: 53
-    protocol: TCP
-EOF
-    fi
-
     
     local TEMPLATE=/etc/flannel/options.env
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-FLANNELD_IFACE=127.0.0.1
+FLANNELD_IFACE=${HOST_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 EOF
     fi
@@ -599,7 +442,7 @@ EOF
     fi
 
     local TEMPLATE=/etc/kubernetes/cni/net.d/10-flannel.conf
-    if [ "${USE_CALICO}" = "false" ] && [ ! -f "${TEMPLATE}" ]; then
+    if [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -669,7 +512,7 @@ done
 
 systemctl stop update-engine; 
 
-systemctl mask update-engine
+systemctl disable update-engine
 
 systemctl daemon-reload
 
@@ -677,7 +520,9 @@ systemctl daemon-reload
 
 systemctl enable {flanneld,kubelet}
 
-  systemctl start {flanneld,docker,kubelet}
+  systemctl start  flanneld
+  systemctl start  docker
+  systemctl start  kubelet
 #get_kubectl
 
 #test_bootstrap
