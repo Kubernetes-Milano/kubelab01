@@ -40,18 +40,17 @@ echo
 echo "Lancio di etcd..."
 echo 
 
-local TEMPLATE=/etc/systemd/system/etcd2.service.d/40-listen-address.conf
-
-if [! -f $TEMPLATE]; then 
-  mkdir -p $(dirname $TEMPLATE)
-  cat << EOF > $TEMPLATE
+  local etcd_template=/etc/systemd/system/etcd2.service.d/40-listen-address.conf
+  if [ ! -f $etcd_template ]; then 
+  mkdir -p $(dirname $etcd_template)
+  cat << EOF > $etcd_template
 [Service]
 Environment=ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
 Environment=ETCD_ADVERTISE_CLIENT_URLS=http://${COREOS_PUBLIC_IPV4}:2379
 EOF
   fi 
 
-
+systemctl daemon-reload;
 
 systemctl start etcd2
 
