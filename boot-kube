@@ -10,13 +10,8 @@ set -ev
 # 5. Deploy delle componenti aggiuntive: DNS. 
 #
 
-function init_export {
-
-# Indirizzo IP della macchina virtuale
-export ADVERTISE_IP=172.17.8.101
-
 # Come raggiungere etcd (http://ip:port)
-export ETCD_ENDPOINTS=http://172.17.8.101 ### Cambiami se l'IP della macchina è diverso.
+export ETCD_ENDPOINTS=http://${COREOS_PUBLIC_IPV4}:2379 ### Cambiami se l'IP della macchina è diverso.
 
 # La versione di (vX.Y.Z) Kubernetes
 export K8S_VER=v1.6.0_coreos.0
@@ -36,36 +31,44 @@ export K8S_SERVICE_IP=10.3.0.1
 
 # Come raggiungere il servizio DNS interno del cluster deployato come add-on.
 export DNS_SERVICE_IP=10.3.0.10
-}
-
 
 # -------------
 
-
-
 function init_etcd {
- # Fermo il servizio classico di etcd
- systemctl stop etcd >> /dev/null
- echo "Lancio di etcd..."
- docker run -d -v /usr/share/ca-certificates/:/etc/ssl/certs \
-            -p 4001:4001 \
-            -p 2380:2380 \
-            -p 2379:2379 \
-            --name etcd \
-            quay.io/coreos/etcd /usr/local/bin/etcd \
-            -name etcd0 \
-            -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001 \
-            -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001 \
-            -initial-advertise-peer-urls http://${ADVERTISE_IP}:2380 \
-            -listen-peer-urls http://0.0.0.0:2380 \
-            -initial-cluster-token chiave-di-accesso \
-            -initial-cluster etcd0=http://${ADVERTISE_IP}:2380 \
-            -initial-cluster-state new
+
+echo 
+echo "Lancio di etcd..."
+echo 
+
+systemctl start etcd2
+
+systemctl enable etcd
+
+
+# # Fermo il servizio classico di etcd
+# systemctl stop etcd >> /dev/null
+# echo "Lancio di etcd..."
+# docker run -d -v /usr/share/ca-certificates/:/etc/ssl/certs \
+#            -p 4001:4001 \
+#            -p 2380:2380 \
+#            -p 2379:2379 \
+#            --name etcd \
+#            quay.io/coreos/etcd /usr/local/bin/etcd \
+#            -name etcd0 \
+#            -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001 \
+#            -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001 \
+#            -initial-advertise-peer-urls http://${ADVERTISE_IP}:2380 \
+#            -listen-peer-urls http://0.0.0.0:2380 \
+#            -initial-cluster-token chiave-di-accesso \
+#            -initial-cluster etcd0=http://${ADVERTISE_IP}:2380 \
+#            -initial-cluster-state new
 }
 
 function init_certs {
   echo "Preparazione dei certificati..."
   
+  echo
+  echo "Cert 1..."
   local CA=/etc/kubernetes/ssl/ca.pem 
   if [ ! -f $CA ]; then 
     echo "CA: $CA"
@@ -99,7 +102,9 @@ EOF
 
 
 
-  local APISERVER_CERT=/etc/kubernetes/ssl/apiserver.pem 
+  local APISERVER_CERT=/etc/kubernetes/ssl/apiserver.pem
+  echo
+  echo "Cert 2..." 
   if [ ! -f $APISERVER_CERT ]; then 
     echo "APISERVER_CERT: $APISERVER_CERT"
     mkdir -p $(dirname $APISERVER_CERT)
@@ -131,7 +136,11 @@ EOF
   fi 
 
 
-  local APISERVER_CERT=/etc/kubernetes/ssl/apiserver-key.pem 
+  local APISERVER_KEY_CERT=/etc/kubernetes/ssl/apiserver-key.pem
+
+  echo
+  echo "Cert 3..."
+
   if [ ! -f $APISERVER_KEY_CERT ]; then 
     echo "APISERVER_CERT: $APISERVER_KEY_CERT"
     mkdir -p $(dirname $APISERVER_KEY_CERT)
@@ -162,9 +171,12 @@ S0geevYPIwePtygz8f2GfMGdnErq73pwlSSWeI+vlO9knPnMi805hTO/MbOTB9ET
 EOF
   fi 
 
+  echo 
   echo "Configuro il permesso 600 per ogni certificati chiave presente"
-  chmod 600 /etc/kubernetes/ssl/*-key.pem
+  echo 
   echo "Faccio diventare i certificati di proprieta di root"
+  echo
+  chmod 600 /etc/kubernetes/ssl/*-key.pem
   chown root:root /etc/kubernetes/ssl/*-key.pem
 
 
@@ -174,13 +186,13 @@ EOF
 
 function init_flannel {
     echo "Check per etcd..."
-    curl --silent "$ETCD/v2/machines" > /dev/null 
+    curl --silent "$ETCD/v2/machines"
     
-    RES=$(curl --silent -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ACTIVE_ETCD/v2/keys/coreos.com/network/config?prevExist=false")
+    RES=$(curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_ENDPOINTS/v2/keys/coreos.com/network/config")
     
     echo "Ci sono errori?"
     
-    if [ -z "$(echo $RES | grep '"action":"create"')" ] && [ -z "$(echo $RES | grep 'La chiave esiste gia')" ]; then
+    if [ -z "$(echo $RES | grep '"action":"create"')" ] && [ -z "$(echo $RES | grep 'Key already exists')" ]; then
         echo "Ci sono errori con la configurazione di flanneld: $RES"
     fi
 
@@ -226,39 +238,6 @@ WantedBy=multi-user.target
 EOF
     fi
 
-    local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
-    if [ ! -f $TEMPLATE ]; then
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-proxy
-  namespace: kube-system
-spec:
-  hostNetwork: true
-  containers:
-  - name: kube-proxy
-    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
-    command:
-    - /hyperkube
-    - proxy
-    - --master=http://127.0.0.1:8080
-    - --cluster-cidr=${POD_NETWORK}
-    securityContext:
-      privileged: true
-    volumeMounts:
-    - mountPath: /etc/ssl/certs
-      name: ssl-certs-host
-      readOnly: true
-  volumes:
-  - hostPath:
-      path: /usr/share/ca-certificates
-    name: ssl-certs-host
-EOF
-    fi
-
     local TEMPLATE=/etc/kubernetes/manifests/kube-apiserver.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
@@ -273,7 +252,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
+    image: ${HYPERKUBE_IMAGE_REPO}:${K8S_VER}
     command:
     - /hyperkube
     - apiserver
@@ -282,7 +261,7 @@ spec:
     - --allow-privileged=true
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
-    - --advertise-address=${ADVERTISE_IP}
+    - --advertise-address=${COREOS_PUBLIC_IPV4}
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
@@ -321,6 +300,41 @@ spec:
 EOF
     fi
 
+
+     local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-proxy
+    image: ${HYPERKUBE_IMAGE_REPO}:${K8S_VER}
+    command:
+    - /hyperkube
+    - proxy
+    - --master=http://127.0.0.1:8080
+    - --cluster-cidr=${POD_NETWORK}
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
+      readOnly: true
+  volumes:
+  - hostPath:
+      path: /usr/share/ca-certificates
+    name: ssl-certs-host
+EOF
+    fi
+
+
     local TEMPLATE=/etc/kubernetes/manifests/kube-controller-manager.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
@@ -334,7 +348,7 @@ metadata:
 spec:
   containers:
   - name: kube-controller-manager
-    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
+    image: ${HYPERKUBE_IMAGE_REPO}:${K8S_VER}
     command:
     - /hyperkube
     - controller-manager
@@ -384,7 +398,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
+    image: ${HYPERKUBE_IMAGE_REPO}:${K8S_VER}
     command:
     - /hyperkube
     - scheduler
@@ -545,7 +559,7 @@ EOF
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-FLANNELD_IFACE=$ADVERTISE_IP
+FLANNELD_IFACE=$COREOS_PUBLIC_IPV4
 FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
 EOF
     fi
@@ -642,45 +656,34 @@ function get_kubectl {
 }
 
 
-function write_files {
-  echo "Scrivendo su disco i file ..."
-  echo "Esportando le varianili d'ambiente!"
-  init_export  
 
-  echo "Scrivendo i certificati"
-  init_certs
-
-  echo "Scrivendo i template pe le componenti di k8s"
-  init_templates
-}
-
-write_files
-
-
-init_etcd
-
-
-init_flannel
+for job in init_certs init_templates init_etcd init_flannel
+do 
+  $job &
+  wait $!
+done
 
 
 
 
+systemctl stop update-engine; 
 
-systemctl stop update-engine; systemctl mask update-engine
+systemctl mask update-engine
 
 systemctl daemon-reload
 
-systemctl enable {flanneld,kubelet}; 
-
-systemctl start {flanneld,docker,kubelet}
-
-get_kubectl
-
-test_bootstrap
-
-start_addons
 
 
+systemctl enable {flanneld,kubelet}
 
+for s in flanneld docker kubelet
+do
+  systemctl start $s &
+  wait $!
+done
+
+#get_kubectl
+
+#test_bootstrap
 echo "FINITO!!!"
 
