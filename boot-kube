@@ -15,7 +15,7 @@ export HOST_IP=172.17.8.101
 export ETCD_ENDPOINTS=http://127.0.0.1:2379 ### Cambiami se l'IP della macchina è diverso.
 
 # La versione di (vX.Y.Z) Kubernetes
-export K8S_VER=v1.6.0_coreos.0
+export K8S_VER=v1.6.1_coreos.0
 
 # La repo dell-immagine Hyperkub da usare (Che cosa è hyperkube?)
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -54,7 +54,11 @@ EOF
 systemctl daemon-reload;
 
 systemctl start etcd2
-}
+} ## FINE INIT_ETCD
+
+
+
+
 
 function init_certs {
   echo "Preparazione dei certificati..."
@@ -95,6 +99,7 @@ EOF
 
 
   local APISERVER_CERT=/etc/kubernetes/ssl/apiserver.pem
+
   echo
   echo "Cert 2..." 
   if [ ! -f $APISERVER_CERT ]; then 
@@ -170,16 +175,14 @@ EOF
   echo
   chmod 600 /etc/kubernetes/ssl/*-key.pem
   chown root:root /etc/kubernetes/ssl/*-key.pem
-
-
-}
+} ## FINE INIT_CERTS
 
 
 
 function init_flannel {
     echo "Check per etcd..."
     curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_ENDPOINTS/v2/keys/coreos.com/network/config"
-}
+} ## FINE INIT_FLANNEL
 
 function init_templates {
     local TEMPLATE=/etc/systemd/system/kubelet.service
@@ -418,6 +421,7 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 EOF
     fi
 
+    
     local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
@@ -431,6 +435,8 @@ EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
 EOF
     fi
 
+    
+    
     local TEMPLATE=/etc/kubernetes/cni/docker_opts_cni.env
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
@@ -441,8 +447,10 @@ DOCKER_OPT_IPMASQ=""
 EOF
     fi
 
+
+
     local TEMPLATE=/etc/kubernetes/cni/net.d/10-flannel.conf
-    if [ ! -f "${TEMPLATE}" ]; then
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -455,7 +463,7 @@ EOF
 }
 EOF
     fi
-}
+} ## FINE INIT_TEMPLATES
 
 function start_addons {
     echo "Checking del API server di Kubernetes API"
@@ -463,7 +471,7 @@ function start_addons {
     do
         sleep 5
     done
-}
+} ## 
 
 function test_bootstrap {
   echo 
@@ -475,13 +483,12 @@ function test_bootstrap {
 # kube-apiserver-$node
 # kube-controller-$node
 # kube-proxy-$node
-
-}
+} ## 
 
 function get_kubectl {
   echo "Inizio a scaricare..."
   cd ~
-  curl -O https://storage.googleapis.com/kubernetes-release/release/v1.6.0/bin/linux/amd64/kubectl >> /dev/null
+  curl -O https://storage.googleapis.com/kubernetes-release/release/v1.6.1/bin/linux/amd64/kubectl >> /dev/null
  
   echo "Ho finito!!!"
 
@@ -497,7 +504,7 @@ function get_kubectl {
    else 
      echo "kubectl - non pronto!"
   fi
-}
+} ##
 
 
 
@@ -520,10 +527,14 @@ systemctl daemon-reload
 
 systemctl enable {flanneld,kubelet}
 
-  systemctl start  flanneld
-  systemctl start  docker
-  systemctl start  kubelet
+systemctl start  flanneld
+systemctl start  docker
+systemctl start  kubelet
+
+
 #get_kubectl
 
 #test_bootstrap
+
+
 echo "FINITO!!!"
