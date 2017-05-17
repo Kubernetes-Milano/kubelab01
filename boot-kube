@@ -1,5 +1,5 @@
-#! /bin/sh 
-set -ev 
+ #! /bin/sh 
+set -e 
 
 # Quello che faremo è:
 # 1. Istanziare e configurare il DB *etcd* come container.
@@ -10,9 +10,9 @@ set -ev
 # 5. Deploy delle componenti aggiuntive: DNS. 
 #
 
-export HOST_IP=172.17.8.101
+export HOST_IP=127.0.0.1
 # Come raggiungere etcd (http://ip:port)
-export ETCD_ENDPOINTS=http://127.0.0.1:2379 ### Cambiami se l'IP della macchina è diverso.
+export ETCD_ENDPOINTS="http://${HOST_IP}:2379" 
 
 # La versione di (vX.Y.Z) Kubernetes
 export K8S_VER=v1.6.1_coreos.0
@@ -47,7 +47,7 @@ echo
   cat << EOF > $etcd_template
 [Service]
 Environment=ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-Environment=ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379
+Environment=ETCD_ADVERTISE_CLIENT_URLS=${ETCD_ENDPOINTS}
 EOF
   fi 
 
@@ -71,28 +71,23 @@ function init_certs {
     mkdir -p $(dirname $CA)
     cat << EOF > $CA
 -----BEGIN CERTIFICATE-----
-MIIDxTCCAq2gAwIBAgIJAM0gpqK7hjJrMA0GCSqGSIb3DQEBCwUAMHkxCzAJBgNV
-BAYTAklUMQswCQYDVQQIDAJNSTEOMAwGA1UEBwwFTWlsYW4xDDAKBgNVBAoMA0lL
-UzEMMAoGA1UECwwDSVRJMQwwCgYDVQQDDANpa3MxIzAhBgkqhkiG9w0BCQEWFGFu
-ZHJlaS5wZXRyb3ZAaWtzLml0MB4XDTE3MDUwMzE1MjM1NVoXDTQ0MDkxODE1MjM1
-NVoweTELMAkGA1UEBhMCSVQxCzAJBgNVBAgMAk1JMQ4wDAYDVQQHDAVNaWxhbjEM
-MAoGA1UECgwDSUtTMQwwCgYDVQQLDANJVEkxDDAKBgNVBAMMA2lrczEjMCEGCSqG
-SIb3DQEJARYUYW5kcmVpLnBldHJvdkBpa3MuaXQwggEiMA0GCSqGSIb3DQEBAQUA
-A4IBDwAwggEKAoIBAQCdUBPxD/7z4kfligH2tpiBRa+5YQD9M8WCs6nOqX6IFR87
-TSif6qjDF5gCpsrgvnlcxKAfkwmoXWokhYzDehkaa9pYrAbb7cKBW5memd+ZUGHu
-MU5J/+wmGi0dObDYeiqR46DI3J8LOf5muvmWGymUURLNZNV7Is/iWvJ6Wo1YJ3Ca
-CW+mjAuvY/JLLrL/QguGcgxiHQn08S92RkQfX1D+lLgiTo6imr366qNvKDtPYreO
-FW7ya4BtuI9uTn7l87Bn6ugwnzpjrIybPeP1l5CRiF/0Cnb3bFicNFUf2EO4by68
-6mQQcI5Wvge10o3498ul07kLbReNKbRG/ppbbqAXAgMBAAGjUDBOMB0GA1UdDgQW
-BBTy62VddMYxa1hvpz7wj65FF7SjJzAfBgNVHSMEGDAWgBTy62VddMYxa1hvpz7w
-j65FF7SjJzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAxHCPACFog
-pxkVsPsy7HLdnyuTTjqs6qFpVonPHsGyQ2442KwUqg4Rqmnu/MrmbWKOUTeN0ADz
-EqSeOugYtkWfvh1MlozdouPrJNBk+i4cVI+jiju89o2+pvQbjHz9lcmbKzakSXeS
-tJzP51zTB7l0TTyHaainnr6EOz0o52F9sT5vatsIUhkRo4fKTvmZ0swVV1zI/Lq9
-fbPULOoQZiZeuD0Haj6n9izGrCaRzh9ayW9I66Bcrw4jkkOvF8g861812Bk+SDUo
-H+umGRrAD9I11j8TR1zFVvE4m65xHtcXt2fbNfDtRgK+QY2/vQE9C36GnBhymvIq
-mouzp0Hyy3Kv
------END CERTIFICATE-----    
+MIIC9zCCAd+gAwIBAgIJAPiMYeY2tpHtMA0GCSqGSIb3DQEBCwUAMBIxEDAOBgNV
+BAMMB2t1YmUtY2EwHhcNMTcwNTE3MTQwNTE3WhcNNDQxMDAyMTQwNTE3WjASMRAw
+DgYDVQQDDAdrdWJlLWNhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
+962XbShA0GU9c8qcc/BILh5LC8fH8TYeYdRHWiwQUbWLz/851Tu/V6g/KilhbSpY
+exnux0c0OmAPvS5om5D9cs9R+r4x3TuW0BehBoIibeyp7HYeDxVG80xewBnJjO/v
+FUTJD0j7/t/B8Y2PJTml7weNHupFpownE4iQS+om+uaFnkp4qeIVd/jp2MiG2VHo
+YT235UpaDiTjyw1OYC/CtCUY6PKVl5qX8WNw7ubTnFvEFbJjR59yuFblNQgJgKqa
+q7SdYPfCGqd+Uuo32mqlw6GlNh4XdciNTXqrwUx0m4T82VBa19/zBO1UGwwjeFQB
+rFg3vL4GN5rINx5trneg3QIDAQABo1AwTjAdBgNVHQ4EFgQUqGLrKgoWnqSFD+O2
+g7De4BsOtGwwHwYDVR0jBBgwFoAUqGLrKgoWnqSFD+O2g7De4BsOtGwwDAYDVR0T
+BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAFFHdsY2Xq93ibFvMgcXDggxvZ8TE
+w7MLtn4pkOVUn2uT/zIE9o4Jnmmye78XzK82jAi19VY9lgDMYqR1xUXavQcuRv8Z
+7ibz2tQkgsJc7N/suZVyWq+NS69+Oy5SvwI8Zn7m/TUSGzNhcczKaGfbEX/Pj4e/
+PAJb44n7P6Hmuvqj/EGLYc1cyEKfibpsQZOu4L4Zunw7U1Hod2ftf7BsoM6GrArb
+FffiYyl4ueYh1Y3QxbocXfhCmExKfNbHq0yc22eWjD//1dMKe0KAlC5ySF9vJgHD
+R55mJ6pPAWJlVaUPxUklwsCa+FGT0DEEaRQgyCrB9UaXNI01qS5rNFTKuA==
+-----END CERTIFICATE-----
 EOF
    fi
 
@@ -107,27 +102,24 @@ EOF
     mkdir -p $(dirname $APISERVER_CERT)
     cat << EOF > $APISERVER_CERT 
 -----BEGIN CERTIFICATE-----
-MIID5DCCAsygAwIBAgIJAP2olnP+02hvMA0GCSqGSIb3DQEBBQUAMHkxCzAJBgNV
-BAYTAklUMQswCQYDVQQIDAJNSTEOMAwGA1UEBwwFTWlsYW4xDDAKBgNVBAoMA0lL
-UzEMMAoGA1UECwwDSVRJMQwwCgYDVQQDDANpa3MxIzAhBgkqhkiG9w0BCQEWFGFu
-ZHJlaS5wZXRyb3ZAaWtzLml0MB4XDTE3MDUwMzE2MjMwOFoXDTE4MDUwMzE2MjMw
-OFowGTEXMBUGA1UEAwwOa3ViZS1hcGlzZXJ2ZXIwggEiMA0GCSqGSIb3DQEBAQUA
-A4IBDwAwggEKAoIBAQC+BnEHh6uDxS35ch5zoR6yJID1SX5Ke4IwsxvF1GjZNMqb
-CzjQ2u2nHxkGoYfl5f8hJJRKPQzPAJl+HU8k7lN7U3p4iSVpqiI3vU7Lo5cexV6u
-yASHR02mm3gOKsajacrIh+XpimVHTi0iqeUnBSPfDgWWHM15UP3JKmkEqCmBi175
-KfufFLdWnRCx+MQXcjBJGm9CthCXgdGg/+3DxptQwDHUpXSpURAAVigAdNHOB2L7
-MxdhbTj8DRA62BwY2jnoEjeS7V+DcVKdLCCu7apHsy7cbhQciWzbEGL+v6W2GYKw
-gr3N3wRoDSwjjT0mvoNCsxf5vWcfykUTON/EOv/rAgMBAAGjgc4wgcswCQYDVR0T
-BAIwADALBgNVHQ8EBAMCBeAwgbAGA1UdEQSBqDCBpYIKa3ViZXJuZXRlc4ISa3Vi
-ZXJuZXRlcy5kZWZhdWx0ghZrdWJlcm5ldGVzLmRlZmF1bHQuc3ZjgiRrdWJlcm5l
-dGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWyCFmNvcmVvczAxLm92aXJ0Lmlr
-cy5sYWKCG3gtZWxrLWtub2RlMDIub3ZpcnQuaWtzLmxhYocECgMAAYcEwKiNH4cE
-wKiNGzANBgkqhkiG9w0BAQUFAAOCAQEAl3M8y4qm0EyrZxmflnAZBZdcRZAAkqn9
-tUfGSgbNPo9DFRakrjGi1MgTKCt0hShQyrunHDgmeyVs67lwnv3bd5Jdc5/lhdeI
-APxrS7/uiZy1BAHx045VnPHfiG9bPFe4SH6KjTtp5ZUkpTPGLIiNjiH1B8UUNVTx
-IeahpDZxZwNW4mi6WXPookdEZ4sbQX9Wlz9T5SJx4Yzqj6ZyG4CKKHlxO4XuKzHM
-S0geevYPIwePtygz8f2GfMGdnErq73pwlSSWeI+vlO9knPnMi805hTO/MbOTB9ET
-//Txm7oVn6kuhDDWVg3TjmAGOuDgDXsE+i04y0tcnMIBusd6fm40xw==
+MIIDMzCCAhugAwIBAgIJAKGvMEfQ+zMAMA0GCSqGSIb3DQEBCwUAMBIxEDAOBgNV
+BAMMB2t1YmUtY2EwHhcNMTcwNTE3MTQ1NjAzWhcNMTgwNTE3MTQ1NjAzWjAZMRcw
+FQYDVQQDDA5rdWJlLWFwaXNlcnZlcjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBALt4bBPCXqOq9tt4LhV25uXw29dcDAwONaiRf8vGzL39KKU3fd14fRZ9
+eXaVfn+9VvnINHSi9ZUwV0jh5bXuVpl7lNpUGFAneivVd/mZnR3nzES3j94iAc4/
+LdVRpYo5tQ+YsjToeGOF7QaKHQgtqe+OxnRZMCew/bsuw0nuY+pN+0w4SN6fOV1N
+9NP0cbhWhWWhTl0VuBunL8rnIFZtaEhj8j0+3bb5rmZyemF8vRiesn3mJuOdrljT
+4s9ZQCTWaMSdu5VO132VgtV1hTokQbPeTTsBLx7NbRQCSjXhlprRSW4NeSY8/Vf7
+FJj92mYExBdg4uroQBfwjYwxCoMIdW0CAwEAAaOBhDCBgTAJBgNVHRMEAjAAMAsG
+A1UdDwQEAwIF4DBnBgNVHREEYDBeggprdWJlcm5ldGVzghJrdWJlcm5ldGVzLmRl
+ZmF1bHSCFmt1YmVybmV0ZXMuZGVmYXVsdC5zdmOCJGt1YmVybmV0ZXMuZGVmYXVs
+dC5zdmMuY2x1c3Rlci5sb2NhbDANBgkqhkiG9w0BAQsFAAOCAQEAoYTSgi+Z8wHj
+UaanLJ4SvXY2vBovR6lebTzL6gtBrrz0TUz1IQQsn3MueD2YxnQOK3xVs0p8pH7e
+hNyMfrw74+P+8l0eQSl1PA4G4F/zr7Wj+Ozvwn+/nZjzBZmLX6fq5Z9I/VIICR/G
+80FuwwalnosO7YHctRD7DYq1wNqymDoSGqdGLTt7ZSDTZPpJHhXuHozG17MxKeyU
++cj4SFD/ReBckfucloU/vpUDTbYTqb3+Ghh4WL1EvL8qbGUnYJojLSf5J+8U5Qsp
+Vu3P96fx/4TgNxAdMP/kXT8tZm+U+PiRigmQCkvTc5o1JDY9Lm23ZR1EAvZr9+Ws
+gQbhaoHGcw==
 -----END CERTIFICATE-----
 EOF
   fi 
@@ -139,32 +131,36 @@ EOF
   echo "Cert 3..."
 
   if [ ! -f $APISERVER_KEY_CERT ]; then 
-    echo "APISERVER_CERT: $APISERVER_KEY_CERT"
+    echo "APISERVER_KEY_CERT: $APISERVER_KEY_CERT"
     mkdir -p $(dirname $APISERVER_KEY_CERT)
     cat << EOF > $APISERVER_KEY_CERT 
------BEGIN CERTIFICATE-----
-MIID5DCCAsygAwIBAgIJAP2olnP+02hvMA0GCSqGSIb3DQEBBQUAMHkxCzAJBgNV
-BAYTAklUMQswCQYDVQQIDAJNSTEOMAwGA1UEBwwFTWlsYW4xDDAKBgNVBAoMA0lL
-UzEMMAoGA1UECwwDSVRJMQwwCgYDVQQDDANpa3MxIzAhBgkqhkiG9w0BCQEWFGFu
-ZHJlaS5wZXRyb3ZAaWtzLml0MB4XDTE3MDUwMzE2MjMwOFoXDTE4MDUwMzE2MjMw
-OFowGTEXMBUGA1UEAwwOa3ViZS1hcGlzZXJ2ZXIwggEiMA0GCSqGSIb3DQEBAQUA
-A4IBDwAwggEKAoIBAQC+BnEHh6uDxS35ch5zoR6yJID1SX5Ke4IwsxvF1GjZNMqb
-CzjQ2u2nHxkGoYfl5f8hJJRKPQzPAJl+HU8k7lN7U3p4iSVpqiI3vU7Lo5cexV6u
-yASHR02mm3gOKsajacrIh+XpimVHTi0iqeUnBSPfDgWWHM15UP3JKmkEqCmBi175
-KfufFLdWnRCx+MQXcjBJGm9CthCXgdGg/+3DxptQwDHUpXSpURAAVigAdNHOB2L7
-MxdhbTj8DRA62BwY2jnoEjeS7V+DcVKdLCCu7apHsy7cbhQciWzbEGL+v6W2GYKw
-gr3N3wRoDSwjjT0mvoNCsxf5vWcfykUTON/EOv/rAgMBAAGjgc4wgcswCQYDVR0T
-BAIwADALBgNVHQ8EBAMCBeAwgbAGA1UdEQSBqDCBpYIKa3ViZXJuZXRlc4ISa3Vi
-ZXJuZXRlcy5kZWZhdWx0ghZrdWJlcm5ldGVzLmRlZmF1bHQuc3ZjgiRrdWJlcm5l
-dGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWyCFmNvcmVvczAxLm92aXJ0Lmlr
-cy5sYWKCG3gtZWxrLWtub2RlMDIub3ZpcnQuaWtzLmxhYocECgMAAYcEwKiNH4cE
-wKiNGzANBgkqhkiG9w0BAQUFAAOCAQEAl3M8y4qm0EyrZxmflnAZBZdcRZAAkqn9
-tUfGSgbNPo9DFRakrjGi1MgTKCt0hShQyrunHDgmeyVs67lwnv3bd5Jdc5/lhdeI
-APxrS7/uiZy1BAHx045VnPHfiG9bPFe4SH6KjTtp5ZUkpTPGLIiNjiH1B8UUNVTx
-IeahpDZxZwNW4mi6WXPookdEZ4sbQX9Wlz9T5SJx4Yzqj6ZyG4CKKHlxO4XuKzHM
-S0geevYPIwePtygz8f2GfMGdnErq73pwlSSWeI+vlO9knPnMi805hTO/MbOTB9ET
-//Txm7oVn6kuhDDWVg3TjmAGOuDgDXsE+i04y0tcnMIBusd6fm40xw==
------END CERTIFICATE-----
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAu3hsE8Jeo6r223guFXbm5fDb11wMDA41qJF/y8bMvf0opTd9
+3Xh9Fn15dpV+f71W+cg0dKL1lTBXSOHlte5WmXuU2lQYUCd6K9V3+ZmdHefMRLeP
+3iIBzj8t1VGlijm1D5iyNOh4Y4XtBoodCC2p747GdFkwJ7D9uy7DSe5j6k37TDhI
+3p85XU300/RxuFaFZaFOXRW4G6cvyucgVm1oSGPyPT7dtvmuZnJ6YXy9GJ6yfeYm
+452uWNPiz1lAJNZoxJ27lU7XfZWC1XWFOiRBs95NOwEvHs1tFAJKNeGWmtFJbg15
+Jjz9V/sUmP3aZgTEF2Di6uhAF/CNjDEKgwh1bQIDAQABAoIBAQCIxH30nGT2+o9F
+5hOYzTn+nw2DvD99vBAhfqTBQbO1F7BDeIx2uqRnd/rZLI8xGi0N5aV/QjPwN2g2
+X7d6VvsO1j3uWlOyhlp3CDGTAyLA4o7/wvtOj3jJwwXpDru6cAdL7ZZ1SvQph1c4
+4iH0CXxkrMDTuQ2Mp2801BTdJvH1yNa7F8yS8H7hE2UiPKNlAnIR4+feKffCVMnT
+zhdxy2TMAmp7DWUDrBFd6OToiZIqwytw13gOueACwG4kGbhfM/1TEo+vYTHzHS+0
+mRF9/3ONlTqEMxEW6mJHOvnukSsWzy7JpDJl4ozDiGFEso7ioCpivUOpsM5cN2wl
+nsX37IJxAoGBAOFBiKqlgsKgQE1wyPmnwUD0FLWl01FVBesrnbpFV2WczWWjXkIJ
+9jDoF+wrw6X4azQQfQGMd9JHDWOodTM55dsSfpH+rrk6x2iLc37RtEN6b4NP9rqs
+DpJh0Qtdvk4PiRNDA7tftSCki1lmON+m6O9jh/B3SAK5wHq1UEksZ/nfAoGBANUO
+p/PVn1sqhqY43H63ekPiiS6KJReouoSildy3/x96yE87nvFL0QaTGEwF4pUZnnCM
+iSjnxJxfC9y+CGoT4y+zXVJmMkiZ5GIG98bC0CXnqFuRqIdI5it+nOzO3nYDUDwI
+MprrJin8COGoakegw/5ScZ4YR2wYRb7xSol9QBIzAoGBANqKOSzOfUmULi6z0Nie
+T9lTtU/yvU14PtDFtTZGFh/IfGIymL1batZSJvuEDkJU/LU7lfxNquaA9tWMV4DG
+mGHt1IySWjPteg/M09XjYI/jFpOAnjDHwy9z5VuwrHSRj/z3FITSuykbWvL2QRGD
+nxS6LOY44815J+wlQuprQcljAoGAW6uQrCNQC4PCp6ZziLodCzRfXfzmdMWOax8h
+Z/Rq+vpzUVQP0TaT20ZS//LQSOLa/wYYxdbjC30Bt5q0OCASciW0k42RORet4lep
+KIYN1SFVmQCVCJBfKHuzvVhM8239ibblPy7KHupoT9+MywDrE3QZmrJLmMDg0YU0
+Uu/nL20CgYBq3QrLqiPkDIkNzyWOEiUUXJWxXblYC5eHWU4NH7pV6he5WX9qPh7Z
+35KGsz2hkaToOjIayHHLeK5C3kzHzDfA+nDQgLYGSUdLxjfd9zGVW4G57ek6+h8W
+TQOqRKkTyNODjObrFsbt2QZ8xZoVjEmdLGCJ1G51luqs6rLxIZP7Mw==
+-----END RSA PRIVATE KEY-----
 EOF
   fi 
 
@@ -193,16 +189,14 @@ function init_templates {
         cat << EOF > $TEMPLATE
 [Service]
 Environment=KUBELET_IMAGE_TAG=${K8S_VER}
-Environment=KUBELET_IMAGE_URL=${HYPERKUBE_IMAGE_REPO}
-Environment="RKT_RUN_ARGS=--uuid-file-save=${uuid_file} \
+Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \
   --volume var-log,kind=host,source=/var/log \
   --mount volume=var-log,target=/var/log \
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf"
-
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
-ExecStartPre=-/usr/bin/rkt rm --uuid-file=${uuid_file}
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --register-schedulable=true \
@@ -211,10 +205,10 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --container-runtime=docker \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
-  --hostname-override=${HOST_IP} \
+  --hostname-override=localhost \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local
-ExecStop=-/usr/bin/rkt stop --uuid-file=${uuid_file}
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10
 
@@ -242,18 +236,21 @@ spec:
     - /hyperkube
     - apiserver
     - --bind-address=0.0.0.0
+    - --advertise-address=10.0.2.15
     - --etcd-servers=${ETCD_ENDPOINTS}
     - --allow-privileged=true
+    - --storage-backend=etcd2
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
-    - --advertise-address=${HOST_IP}
+    - --insecure-bind-address=${HOST_IP}
+    - --insecure-port=8080
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --runtime-config=extensions/v1beta1/networkpolicies=true
-    - --anonymous-auth=false
+    - --anonymous-auth=true
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -400,6 +397,7 @@ spec:
       initialDelaySeconds: 15
       timeoutSeconds: 15
 EOF
+   fi
     
     local TEMPLATE=/etc/flannel/options.env
     if [ ! -f $TEMPLATE ]; then
@@ -463,7 +461,7 @@ EOF
 }
 EOF
     fi
-} ## FINE INIT_TEMPLATES
+}
 
 function start_addons {
     echo "Checking del API server di Kubernetes API"
@@ -538,3 +536,4 @@ systemctl start  kubelet
 
 
 echo "FINITO!!!"
+
