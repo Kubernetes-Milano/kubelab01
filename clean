@@ -1,0 +1,21 @@
+#!/bin/sh 
+
+# Risettare il database etcd2
+rm -fr /var/lib/etcd2/*
+
+# file di configurazione di etcd2
+rm /etc/systemd/system/etcd2.service.d/40-listen-address.conf
+
+# file di configurazione 
+rm -fr /etc/kubernetes/
+
+rm /etc/systemd/system/kubelet.service
+
+rm /etc/flannel/options.env
+
+rm /etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf.conf
+
+rm /etc/systemd/system/docker.service.d/40-flannel.conf
+
+
+
