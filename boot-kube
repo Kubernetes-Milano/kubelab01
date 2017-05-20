@@ -17,11 +17,13 @@ export ETCD_ENDPOINTS="http://${HOST_IP}:2379"
 # La versione di (vX.Y.Z) Kubernetes
 export K8S_VER=v1.6.1_coreos.0
 
-# La repo dell-immagine Hyperkub da usare (Che cosa è hyperkube?)
+# La repo dell-immagine Hyperkub da usare 
+# (Che cosa è hyperkube?)
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
 
 # La rete CIDR per gli IP dei pod.
-# Necessario per la configurazione di flannel, il gestore dell'assegnazione degli IP. 
+# Necessario per la configurazione di flannel, il g
+# estore dell'assegnazione degli IP. 
 export POD_NETWORK=10.2.0.0/16
 
 # La rete CIDR per da usare per le risorse di tipo Service.
